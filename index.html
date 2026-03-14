@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>生肖数据表格 - 增强版</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--el-bg-color);
+      transition: background-color 0.3s ease;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    html.dark {
+      --el-bg-color: #1e1e1e;
+      --el-table-expanded-cell-bg-color: #2d2d2d;
+      --el-table-border: 1px solid #409EFF;
+      --label-color: #a0a0a0;
+      --value-color: #ffffff;
+      --el-color-primary: #409EFF;
+      --preview-highlight-bg: #2c4d3c;
+      --preview-highlight-color: #a0f0c0;
+      --preview-cell-bg: #1a1a1a;
+      --preview-cell-border: #404040;
+      --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    html:not(.dark) {
+      --el-bg-color: #f5f7fa;
+      --el-table-expanded-cell-bg-color: #ffffff;
+      --el-table-border: 1px solid #409EFF;
+      --label-color: #606266;
+      --value-color: #F56C6C;
+      --el-color-primary: #409EFF;
+      --preview-highlight-bg: #e1f5e1;
+      --preview-highlight-color: #2e7d32;
+      --preview-cell-bg: #f0f0f0;
+      --preview-cell-border: #ebeef5;
+      --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .el-table__header tr th,
+    .el-table__row {
+      color: var(--value-color);
+      font-weight: bold;
+      transition: color 0.3s ease;
+    }
+
+    .el-table__inner-wrapper {
+      background-color: var(--el-bg-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .el-table__footer-wrapper tfoot tr td.el-table__cell {
+      border-top: 1px solid var(--preview-cell-border);
+      color: var(--value-color);
+      font-weight: bold;
+      background-color: var(--el-bg-color);
+      transition: all 0.3s ease;
+    }
+
+    .el-table__cell .el-table__expanded-cell {
+      background-color: var(--el-bg-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .el-table__footer {
+      background-color: var(--el-bg-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .app-container {
+      padding: 20px;
+      background-color: var(--el-bg-color);
+      transition: background-color 0.3s ease;
+      min-height: 100vh;
+    }
+
+    .grid-container {
+      padding: 15px;
+      background-color: var(--el-bg-color);
+      transition: background-color 0.3s ease;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .grid-row {
+      display: flex;
+      margin-bottom: 10px;
+    }
+
+    .grid-cell {
+      flex: 1;
+      padding: 12px;
+      margin: 0 5px;
+      min-width: 60px;
+      border-radius: 8px;
+      border: 1px solid var(--preview-cell-border);
+      transition: all 0.3s ease;
+      background-color: var(--preview-cell-bg);
+    }
+
+    .grid-cell:hover {
+      border: var(--el-table-border);
+      transform: translateY(-2px);
+      box-shadow: var(--card-shadow);
+    }
+
+    .grid-cell.zero .cell-value {
+      color: #aaa;
+    }
+
+    .cell-label {
+      display: block;
+      color: var(--label-color);
+      font-size: 12px;
+      font-weight: bold;
+      transition: color 0.3s ease;
+    }
+
+    .cell-value {
+      display: block;
+      color: var(--value-color);
+      font-weight: bold;
+      font-size: 20px;
+      text-align: center;
+      transition: color 0.3s ease;
+    }
+
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      row-gap: 10px;
+      margin-top: 20px;
+      background: var(--el-bg-color);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
+    }
+
+    .summary-title {
+      width: 80px;
+      font-weight: bold;
+      line-height: 32px;
+    }
+
+    .input-grid {
+      border: 1px solid var(--preview-cell-border);
+      padding: 15px;
+      border-radius: 8px;
+      transition: border-color 0.3s ease;
+      background-color: var(--preview-cell-bg);
+    }
+
+    .input-row {
+      display: flex;
+      margin-bottom: 10px;
+    }
+
+    .input-cell {
+      flex: 1;
+      padding: 0 5px;
+      min-width: 100px;
+    }
+
+    .input-label {
+      font-size: 12px;
+      color: var(--label-color);
+      margin-bottom: 5px;
+      transition: color 0.3s ease;
+    }
+
+    .mode-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+    
+    .mode-toggle .el-button {
+      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--preview-cell-border);
+    }
+    
+    .app-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--value-color);
+      transition: color 0.3s ease;
+    }
+    
+    .dark .app-header {
+      border-bottom-color: var(--preview-cell-border);
+    }
+
+    .el-dialog {
+      margin: 10px auto;
+    }
+
+    /* 快速新增对话框样式 - 12×4+1布局 */
+    .quick-add-dialog .el-textarea {
+      margin-bottom: 15px;
+    }
+    
+    .quick-add-dialog .example-text {
+      font-size: 12px;
+      color: var(--label-color);
+      margin-top: 5px;
+      transition: color 0.3s ease;
+    }
+    
+    .quick-add-dialog .preview-table {
+      width: 100%;
+      height: 480px;
+      overflow: hidden;
+    }
+    
+    .quick-add-dialog .preview-grid {
+      padding: 5px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: 30px repeat(5, 1fr);
+      gap: 8px;
+      height: 480px;
+    }
+    
+    .quick-add-dialog .preview-cell {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      transition: all 0.3s ease;
+      background-color: var(--preview-cell-bg);
+      border: 1px solid var(--preview-cell-border);
+      box-shadow: var(--card-shadow);
+      min-height: 40px;
+    }
+    
+    .quick-add-dialog .preview-cell.header {
+      background-color: var(--el-color-primary-light-8);
+      color: var(--el-color-primary);
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .quick-add-dialog .preview-cell.highlight {
+      background-color: var(--preview-highlight-bg);
+      color: var(--preview-highlight-color);
+      border: 1px solid var(--preview-highlight-color);
+      font-weight: bold;
+      transform: scale(1.05);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .quick-add-dialog .preview-cell .cell-label {
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+    
+    .quick-add-dialog .preview-cell .cell-value {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .quick-add-dialog .preview-cell.zero .cell-value {
+      color: #aaa;
+    }
+    
+    /* 第49个号码的样式 */
+    .quick-add-dialog .preview-cell.special {
+      grid-column: 1;
+      grid-row: 6;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 40px;
+    }
+    
+    .quick-add-dialog .preview-cell.special.highlight {
+      background-color: var(--preview-highlight-bg);
+      color: var(--preview-highlight-color);
+      border: 1px solid var(--preview-highlight-color);
+      font-weight: bold;
+      transform: scale(1.05);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .quick-add-dialog .preview-cell.special.zero .cell-value {
+      color: #aaa;
+    }
+    
+    /* 按钮样式优化 */
+    .el-button {
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    
+    .el-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* 表格样式优化 */
+    .el-table {
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .el-table th {
+      background-color: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
+    
+    /* 对话框样式优化 */
+    .el-dialog {
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .el-dialog__header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--preview-cell-border);
+    }
+    
+    .el-dialog__title {
+      color: var(--value-color);
+      font-weight: bold;
+    }
+    
+    .el-dialog__body {
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+      <div class="app-container">
+        <div class="app-header">
+          <div class="app-title">生肖数据表格</div>
+          <div class="mode-toggle">
+            <el-button 
+              :type="isDark ? 'primary' : 'default'" 
+              :icon="isDark ? 'Moon' : 'Sunny'" 
+              circle 
+              @click="toggleDarkMode"
+              :title="isDark ? '切换到白天模式' : '切换到暗黑模式'"
+            ></el-button>
+          </div>
+        </div>
+        
+        <el-button type="primary" @click="handleAdd">新增</el-button>
+        <el-button @click="handleQuickAdd">快速新增</el-button>
+        <el-button @click="handleReset">重置</el-button>
+        <el-table height="330" :data="tableData" border style="width: 100%; margin-top: 20px"
+          :summary-method="getSummaries" show-summary>
+          <!-- 展开行 -->
+          <el-table-column type="expand" width="60">
+            <template #default="{ row }">
+              <div class="grid-container">
+                <!-- 7x7数据展示 -->
+                <div v-for="(_, rowIndex) in 7" :key="rowIndex" class="grid-row">
+                  <div v-for="(_, colIndex) in 7" :key="colIndex" class="grid-cell"
+                    :class="{zero:row.values[rowIndex * 7 + colIndex]===0}">
+                    <span class="cell-label">{{ formatLabelWithZodiac(rowIndex * 7 + colIndex + 1) }}</span>
+                    <span class="cell-value">{{ row.values[rowIndex * 7 + colIndex] }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+
+          <!-- 固定列 -->
+          <el-table-column prop="name" label="名称"></el-table-column>
+          <el-table-column prop="total" label="总数" width="200" align="center" /></el-table-column>
+
+          <!-- 操作列 -->
+          <el-table-column label="操作" width="200" align="center">
+            <template #default="{ row }">
+              <el-button size="small" @click="handleEdit(row)">编辑</el-button>
+              <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 编辑对话框 -->
+        <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑' : '新增'" width="80%">
+          <el-form :model="formData" ref="form">
+            <el-form-item label="名称" prop="name">
+              <el-input v-model="formData.name" />
+            </el-form-item>
+
+            <!-- 7x7输入网格 -->
+            <div class="input-grid">
+              <div v-for="(_, rowIndex) in 7" :key="rowIndex" class="input-row">
+                <div v-for="(_, colIndex) in 7" :key="colIndex" class="input-cell">
+                  <div class="input-label">{{ formatLabelWithZodiac(rowIndex * 7 + colIndex + 1) }}</div>
+                  <el-input-number v-model="formData.values[rowIndex * 7 + colIndex]" :min="0" :step="10"
+                    @change="calculateTotal" />
+                </div>
+              </div>
+            </div>
+
+            <el-form-item label="总计">
+              <el-tag type="info">{{ formData.total }}</el-tag>
+            </el-form-item>
+          </el-form>
+
+          <span slot="footer">
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitForm">确认</el-button>
+          </span>
+        </el-dialog>
+
+        <!-- 快速新增对话框 - 12×4+1布局 -->
+        <el-dialog v-model="quickAddDialogVisible" title="快速新增" width="1100px" class="quick-add-dialog">
+          <el-form :model="quickAddForm" ref="quickAddForm">
+            <el-form-item label="名称" prop="name">
+              <el-input v-model="quickAddForm.name" placeholder="请输入名称" />
+            </el-form-item>
+            
+            <el-form-item label="输入规则">
+              <el-input 
+                v-model="quickAddForm.text" 
+                type="textarea" 
+                :rows="4" 
+                placeholder="请输入规则，例如：1.5.6各10 或 03、24各20 或 鸡猪狗各20 或 龙鸡狗5，马3"
+                @input="handleQuickAddInput"
+              />
+              <div class="example-text">示例：1.5.6各10 或 03、24各20 或 鸡猪狗各20 或 龙鸡狗5，马3</div>
+            </el-form-item>
+            
+            <el-form-item label="预览">
+              <div class="preview-table">
+                <div class="preview-grid">
+                  <!-- 表头 - 12列 -->
+                  <div v-for="(zodiac, index) in zodiacsForHeader" :key="'header-' + index" class="preview-cell header">
+                    {{ zodiac }}
+                  </div>
+                  
+                  <!-- 前48个号码 - 4行×12列 -->
+                  <div v-for="(value, index) in quickAddPreviewValues.slice(0, 48)" :key="'data-' + index" 
+                    class="preview-cell" :class="{highlight: value > 0, zero: value === 0}">
+                    <span class="cell-label">{{ formatLabelWithZodiac(index + 1) }}</span>
+                    <span class="cell-value">{{ value }}</span>
+                  </div>
+                  
+                  <!-- 第49个号码 - 最后一行的第一列 -->
+                  <div class="preview-cell special" :class="{highlight: quickAddPreviewValues[48] > 0, zero: quickAddPreviewValues[48] === 0}">
+                    <span class="cell-label">{{ formatLabelWithZodiac(49) }}</span>
+                    <span class="cell-value">{{ quickAddPreviewValues[48] }}</span>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
+            
+            <el-form-item label="总计">
+              <el-tag type="info">{{ quickAddPreviewTotal }}</el-tag>
+            </el-form-item>
+          </el-form>
+          
+          <span slot="footer">
+            <el-button @click="quickAddDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitQuickAdd">确认</el-button>
+          </span>
+        </el-dialog>
+
+        <!-- 列合计展示 -->
+        <div class="summary-row">
+          <div v-for="(total, index) in columnTotals" :key="index" class="grid-cell" :class="{zero:total===0}">
+            <span class="cell-label">{{ formatLabelWithZodiac(index + 1) }}</span>
+            <span class="cell-value">{{ total }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  <script>
+    const { createApp } = Vue;
+    const { ElButton, ElTable, ElTableColumn, ElDialog, ElForm, ElFormItem, ElInput, ElInputNumber, ElTag, ElMessageBox, ElMessage } = ElementPlus;
+    
+    const App = {
+      data() {
+        return {
+          tableData: [],
+          dialogVisible: false,
+          quickAddDialogVisible: false,
+          isEdit: false,
+          currentIndex: -1,
+          formData: this.initFormData(),
+          quickAddForm: {
+            name: '',
+            text: ''
+          },
+          quickAddPreviewValues: Array(49).fill(0),
+          isDark: false,
+          rules: {
+            name: [{ required: true, message: '请输入名称', trigger: 'blur' }]
+          },
+          // 生肖数组
+          zodiacs: ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'],
+          // 当前年份的生肖索引（2025年是蛇年，索引为5）
+          currentYearZodiacIndex: 5
+        }
+      },
+      computed: {
+        // 计算列合计
+        columnTotals() {
+          const totals = Array(49).fill(0)
+          this.tableData.forEach(row => {
+            row.values.forEach((val, index) => {
+              totals[index] += val
+            })
+          })
+          return totals
+        },
+        // 快速新增预览总计
+        quickAddPreviewTotal() {
+          return this.quickAddPreviewValues.reduce((a, b) => a + b, 0)
+        },
+        // 表头显示的12生肖
+        zodiacsForHeader() {
+          const headerZodiacs = [];
+          for (let i = 0; i < 12; i++) {
+            const zodiacIndex = (this.currentYearZodiacIndex - i) % 12;
+            headerZodiacs.push(this.zodiacs[zodiacIndex < 0 ? zodiacIndex + 12 : zodiacIndex]);
+          }
+          return headerZodiacs;
+        }
+      },
+      methods: {
+        setTableDataToLocalStorage() {
+          localStorage.setItem('tableData', JSON.stringify(this.tableData))
+        },
+        initFormData() {
+          return {
+            name: '',
+            values: Array(49).fill(0),
+            total: 0
+          }
+        },
+        // 格式化数字为两位数
+        formatNumber(num) {
+          return num.toString().padStart(2, '0')
+        },
+        // 格式化数字并添加生肖
+        formatLabelWithZodiac(num) {
+          // 计算生肖索引：从当前年份的生肖开始，反向排列
+          const zodiacIndex = (this.currentYearZodiacIndex - (num - 1)) % 12;
+          return `${this.formatNumber(num)}${this.zodiacs[zodiacIndex < 0 ? zodiacIndex + 12 : zodiacIndex]}`;
+        },
+        // 合计行计算
+        getSummaries() {
+          const sums = ['合计', '', this.columnTotals.reduce((a, b) => a + b, 0)]
+          return sums
+        },
+        calculateTotal() {
+          this.formData.total = this.formData.values.reduce((a, b) => a + b, 0)
+        },
+        // 切换暗黑/白天模式
+        toggleDarkMode() {
+          this.isDark = !this.isDark;
+          const html = document.documentElement;
+          if (this.isDark) {
+            html.classList.add('dark');
+          } else {
+            html.classList.remove('dark');
+          }
+          // 保存用户偏好到本地存储
+          localStorage.setItem('darkMode', this.isDark);
+        },
+        handleAdd() {
+          this.isEdit = false
+          this.formData = this.initFormData()
+          this.dialogVisible = true
+        },
+        handleQuickAdd() {
+          this.quickAddForm = {
+            name: '',
+            text: ''
+          }
+          this.quickAddPreviewValues = Array(49).fill(0)
+          this.quickAddDialogVisible = true
+        },
+        handleReset() {
+          this.$confirm('确认重置表格吗？', '提示', {
+            type: 'warning'
+          }).then(() => {
+            this.tableData = []
+            this.setTableDataToLocalStorage()
+          })
+        },
+        handleEdit(row) {
+          this.isEdit = true
+          this.currentIndex = this.tableData.indexOf(row)
+          this.formData = JSON.parse(JSON.stringify(row))
+          this.dialogVisible = true
+        },
+        handleDelete(row) {
+          this.$confirm('确认删除该记录？', '提示', {
+            type: 'warning'
+          }).then(() => {
+            const index = this.tableData.indexOf(row)
+            this.tableData.splice(index, 1)
+            this.setTableDataToLocalStorage()
+          })
+        },
+        submitForm() {
+          this.$refs.form.validate(valid => {
+            if (valid) {
+              const data = { ...this.formData }
+              if (this.isEdit) {
+                this.tableData.splice(this.currentIndex, 1, data)
+              } else {
+                this.tableData.push(data)
+              }
+              this.setTableDataToLocalStorage()
+              this.dialogVisible = false
+            }
+          })
+        },
+        // 处理快速新增输入
+        handleQuickAddInput() {
+          // 如果输入为空，重置预览值
+          if (!this.quickAddForm.text.trim()) {
+            this.quickAddPreviewValues = Array(49).fill(0);
+            return;
+          }
+          
+          // 解析文本
+          this.parseQuickAddText(this.quickAddForm.text);
+        },
+        // 解析快速新增文本
+        parseQuickAddText(text) {
+          // 重置预览值
+          const newValues = Array(49).fill(0);
+          
+          // 将整个文本当作一行来解析
+          this.parseText(text, newValues);
+          
+          // 更新预览值
+          this.quickAddPreviewValues = newValues;
+        },
+        // 解析文本
+        parseText(text, values) {
+          let i = 0;
+          const length = text.length;
+          
+          while (i < length) {
+            const char = text[i];
+            
+            // 跳过空白字符
+            if (this.isWhitespace(char)) {
+              i++;
+              continue;
+            }
+            
+            // 检查是否是生肖字符
+            if (this.zodiacs.includes(char)) {
+              i = this.parseZodiacPattern(text, i, values);
+            }
+            // 检查是否是数字
+            else if (this.isDigit(char)) {
+              i = this.parseNumberPattern(text, i, values);
+            }
+            // 其他字符跳过
+            else {
+              i++;
+            }
+          }
+        },
+        // 解析生肖模式
+        parseZodiacPattern(text, startIndex, values) {
+          let i = startIndex;
+          const zodiacsFound = [];
+          
+          // 收集连续的生肖字符
+          while (i < text.length && this.zodiacs.includes(text[i])) {
+            zodiacsFound.push(text[i]);
+            i++;
+          }
+          
+          // 跳过非数字字符，直到找到数字
+          while (i < text.length && !this.isDigit(text[i])) {
+            i++;
+          }
+          
+          // 提取数字值
+          let valueStr = '';
+          while (i < text.length && this.isDigit(text[i])) {
+            valueStr += text[i];
+            i++;
+          }
+          
+          const value = parseInt(valueStr) || 0;
+          
+          if (value > 0) {
+            // 为每个生肖对应的所有位置加上值
+            zodiacsFound.forEach(zodiac => {
+              this.setZodiacValues(zodiac, value, values);
+            });
+          }
+          
+          return i;
+        },
+        // 解析数字模式
+        parseNumberPattern(text, startIndex, values) {
+          let i = startIndex;
+          const numbersFound = [];
+          let currentNumber = '';
+          
+          // 收集数字和分隔符
+          while (i < text.length) {
+            const char = text[i];
+            
+            if (this.isDigit(char)) {
+              currentNumber += char;
+            } else if (this.isSeparator(char)) {
+              // 遇到分隔符，保存当前数字
+              if (currentNumber) {
+                const num = parseInt(currentNumber);
+                if (num >= 1 && num <= 49) {
+                  numbersFound.push(num);
+                }
+                currentNumber = '';
+              }
+            } else if (this.isKeyword(char)) {
+              // 遇到关键字，保存当前数字
+              if (currentNumber) {
+                const num = parseInt(currentNumber);
+                if (num >= 1 && num <= 49) {
+                  numbersFound.push(num);
+                }
+                currentNumber = '';
+              }
+              
+              // 跳过关键字
+              i++;
+              break;
+            } else {
+              // 遇到其他字符，结束数字模式
+              break;
+            }
+            
+            i++;
+          }
+          
+          // 处理最后一个数字
+          if (currentNumber) {
+            const num = parseInt(currentNumber);
+            if (num >= 1 && num <= 49) {
+              numbersFound.push(num);
+            }
+          }
+          
+          // 跳过关键字
+          while (i < text.length && this.isKeyword(text[i])) {
+            i++;
+          }
+          
+          // 提取数字值
+          let valueStr = '';
+          while (i < text.length && this.isDigit(text[i])) {
+            valueStr += text[i];
+            i++;
+          }
+          
+          const value = parseInt(valueStr) || 0;
+          
+          if (value > 0 && numbersFound.length > 0) {
+            // 为每个数字位置加上值
+            numbersFound.forEach(num => {
+              values[num - 1] += value;
+            });
+          }
+          
+          return i;
+        },
+        // 设置生肖对应的所有位置的值
+        setZodiacValues(zodiac, value, values) {
+          const zodiacIndex = this.zodiacs.indexOf(zodiac);
+          // 找到所有匹配该生肖的位置
+          for (let i = 1; i <= 49; i++) {
+            // 反向计算生肖索引
+            const currentZodiacIndex = (this.currentYearZodiacIndex - (i - 1)) % 12;
+            const normalizedIndex = currentZodiacIndex < 0 ? currentZodiacIndex + 12 : currentZodiacIndex;
+            if (normalizedIndex === zodiacIndex) {
+              values[i - 1] += value;
+            }
+          }
+        },
+        // 辅助函数
+        isWhitespace(char) {
+          return char === ' ' || char === '\t' || char === '\n' || char === '\r';
+        },
+        isDigit(char) {
+          return char >= '0' && char <= '9';
+        },
+        isSeparator(char) {
+          return ['、', '，', ',', '。', '.', ';', '；', '-', ' '].includes(char);
+        },
+        isKeyword(char) {
+          return ['各', '个', '每', '号'].includes(char);
+        },
+        // 提交快速新增
+        submitQuickAdd() {
+          if (!this.quickAddForm.name.trim()) {
+            ElMessage.error('请输入名称');
+            return;
+          }
+          
+          if (this.quickAddPreviewTotal === 0) {
+            ElMessage.error('请先输入有效的规则');
+            return;
+          }
+          
+          const data = {
+            name: this.quickAddForm.name,
+            values: [...this.quickAddPreviewValues],
+            total: this.quickAddPreviewTotal
+          };
+          
+          this.tableData.push(data);
+          this.setTableDataToLocalStorage();
+          this.quickAddDialogVisible = false;
+          ElMessage.success('快速新增成功');
+        }
+      },
+      mounted() {
+        // 从本地存储加载表格数据
+        this.tableData = JSON.parse(localStorage.getItem('tableData')) || []
+        
+        // 从本地存储加载暗黑模式设置
+        const savedDarkMode = localStorage.getItem('darkMode');
+        if (savedDarkMode !== null) {
+          this.isDark = JSON.parse(savedDarkMode);
+        }
+        
+        // 设置初始暗黑模式状态
+        const html = document.documentElement;
+        if (this.isDark) {
+          html.classList.add('dark');
+        } else {
+          html.classList.remove('dark');
+        }
+        
+        // 计算当前年份的生肖索引（2025年是蛇年，索引为5）
+        const currentYear = new Date().getFullYear();
+        // 计算从2025年到当前年份的偏移量
+        const yearOffset = currentYear - 2025;
+        // 更新当前年份的生肖索引（蛇年索引为5）
+        this.currentYearZodiacIndex = (5 + yearOffset) % 12;
+      }
+    };
+    
+    const app = createApp(App);
+    app.use(ElementPlus);
+    app.mount("#app");
+</script>
+</body>
+</html>
