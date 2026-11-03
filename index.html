@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
   <script src="https://unpkg.com/vue@3"></script>
   <script src="https://unpkg.com/element-plus"></script>
+  <!-- Element Plus 图标包：CDN 版 Element Plus 不含图标，需单独引入后才能用 Sunny / Moon -->
+  <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.min.js"></script>
+  <!-- 官方暗黑主题：必须引入，否则 html.dark 下 Element Plus 组件（含表格）仍为亮色 -->
+  <link rel="stylesheet" href="css/element-plus-dark.css">
   <style>
     * {
       box-sizing: border-box;
@@ -59,6 +63,36 @@
       transition: background-color 0.3s ease;
     }
 
+    /* 表格底色与页面背景统一：Element Plus 默认白色，在灰底页面上太扎眼。
+       这里不给 !important，保证行 hover 底色（选择器优先级更高）仍然生效 */
+    .el-table,
+    .el-table__inner-wrapper,
+    .el-table__header-wrapper,
+    .el-table__body-wrapper,
+    .el-table__footer-wrapper,
+    .el-table tr,
+    .el-table th.el-table__cell,
+    .el-table td.el-table__cell,
+    .el-table__expanded-cell,
+    .el-table__empty-block {
+      background-color: var(--el-bg-color);
+      transition: background-color 0.3s ease;
+    }
+
+    /* 暗黑模式兜底：CDN 版本与本地暗黑主题变量不一致时，仍强制深色 */
+    html.dark .el-table,
+    html.dark .el-table__inner-wrapper,
+    html.dark .el-table__header-wrapper,
+    html.dark .el-table__body-wrapper,
+    html.dark .el-table__footer-wrapper,
+    html.dark .el-table tr,
+    html.dark .el-table th.el-table__cell,
+    html.dark .el-table td.el-table__cell,
+    html.dark .el-table__expanded-cell,
+    html.dark .el-table__empty-block {
+      background-color: var(--el-bg-color) !important;
+    }
+
     .el-table__footer-wrapper tfoot tr td.el-table__cell {
       border-top: 1px solid var(--preview-cell-border);
       color: var(--value-color);
@@ -85,11 +119,8 @@
     }
 
     .grid-container {
-      padding: 15px;
-      background-color: var(--el-bg-color);
-      transition: background-color 0.3s ease;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      /* 去掉卡片样式：不设背景色 / 圆角 / 阴影，直接与表格底色统一 */
+      padding: 15px 5px;
     }
 
     .grid-row {
@@ -135,23 +166,152 @@
       transition: color 0.3s ease;
     }
 
-    .summary-row {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      row-gap: 10px;
-      margin-top: 20px;
-      background: var(--el-bg-color);
-      padding: 12px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transition: background-color 0.3s ease;
+    /* ===== 主区域 + 侧边栏（el-splitter 可拖动两栏） ===== */
+    .app-layout {
+      height: calc(100vh - 150px);
+      min-height: 520px;
     }
 
-    .summary-title {
-      width: 80px;
-      font-weight: bold;
-      line-height: 32px;
+    /* splitter 面板撑满高度，避免内部高度塌陷 */
+    .app-layout .el-splitter-panel {
+      height: 100%;
+      overflow: hidden;
+      /* 两栏各自的 14px 内边距 + 拖动条，实际间隔约 28px，满足「至少 10px」 */
+      padding: 0;
     }
+
+    /* ===== 窄屏堆叠布局（≤1024px）：不用 splitter，自然上下排列、页面滚动 ===== */
+    .app-layout--stacked {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: auto;
+      min-height: 0;
+    }
+
+    .app-layout--stacked .sidebar,
+    .app-layout--stacked .main-content {
+      height: auto;
+    }
+
+    .app-layout--stacked .table-wrap {
+      flex: none;
+    }
+
+    .app-layout--stacked .totals-grid {
+      grid-auto-rows: auto;
+      gap: 4px;
+    }
+
+    .app-layout--stacked .total-cell {
+      min-height: 44px;
+      padding: 4px 2px;
+    }
+
+    .app-layout--stacked .total-label {
+      font-size: 10px;
+    }
+
+    .app-layout--stacked .total-value {
+      font-size: 15px;
+    }
+
+    .main-content {
+      height: 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      /* 不再做卡片：只保留内边距，与左侧合计栏对齐 */
+      padding: 0 14px;
+    }
+
+    .toolbar {
+      flex: none;
+      margin-bottom: 16px;
+    }
+
+    .table-wrap {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .sidebar {
+      height: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      /* 不做卡片：无背景色 / 无边框 / 无阴影 / 无圆角 */
+      padding: 0 14px;
+      overflow: auto;
+    }
+
+    .sidebar-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--preview-cell-border);
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--value-color);
+    }
+
+    .sidebar-total {
+      font-size: 13px;
+      font-weight: normal;
+      color: var(--label-color);
+    }
+
+    /* 49 个号码的合计网格：固定 7 列 × 7 行，格子随面板高度自适应、不换行 */
+    .totals-grid {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      /* minmax(0,1fr)：允许列被压缩，窄屏（手机）下不会把第 7 列顶出卡片 */
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-auto-rows: 1fr;
+      gap: 8px;
+    }
+
+    .total-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      min-height: 64px;
+      padding: 8px 4px;
+      border-radius: 8px;
+      /* 侧栏本身不再有卡片底色，格子需要自己的底色才和页面区分开 */
+      background-color: var(--preview-cell-bg);
+      border: 1px solid var(--preview-cell-border);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .total-cell.zero .total-value {
+      color: #aaa;
+    }
+
+    .total-label {
+      font-size: 13px;
+      line-height: 1.2;
+      white-space: nowrap;
+      color: var(--label-color);
+      transition: color 0.3s ease;
+    }
+
+    .total-value {
+      font-size: 22px;
+      font-weight: bold;
+      line-height: 1.3;
+      white-space: nowrap;
+      color: var(--value-color);
+      transition: color 0.3s ease;
+    }
+
+    /* 窄屏高度不固定：堆叠布局由 .app-layout--stacked 控制（height:auto，页面自然滚动） */
 
     .input-grid {
       border: 1px solid var(--preview-cell-border);
@@ -159,6 +319,9 @@
       border-radius: 8px;
       transition: border-color 0.3s ease;
       background-color: var(--preview-cell-bg);
+      /* 窗口不够宽时横向滚动，不把输入框挤扁 */
+      overflow-x: auto;
+      overflow-y: hidden;
     }
 
     .input-row {
@@ -169,7 +332,28 @@
     .input-cell {
       flex: 1;
       padding: 0 5px;
-      min-width: 100px;
+      /* 7 列 × 132px ≈ 924px，保证每个数字框都有足够的可读宽度 */
+      min-width: 132px;
+    }
+
+    /* 弹窗内的数字输入框：撑满格子宽度，并收紧 Element Plus 默认给步进按钮留的
+       左右各 42px 内边距，否则数字会被挤成一条缝 */
+    .input-grid .el-input-number {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .input-grid .el-input-number .el-input__wrapper {
+      padding-left: 30px;
+      padding-right: 30px;
+    }
+
+    /* 格子变窄时（手机）进一步压缩内边距，把空间留给数字 */
+    @media (max-width: 768px) {
+      .input-grid .el-input-number .el-input__wrapper {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
     }
 
     .input-label {
@@ -353,6 +537,38 @@
     .el-dialog__body {
       padding: 20px;
     }
+
+    /* ===== 手机端细节（≤768px） ===== */
+    @media (max-width: 768px) {
+      .app-container {
+        padding: 12px;
+      }
+
+      .app-title {
+        font-size: 20px;
+      }
+
+      .toolbar .el-button {
+        margin-bottom: 6px;
+      }
+
+      .input-grid {
+        padding: 8px;
+        overflow-x: auto;
+      }
+
+      .input-cell {
+        min-width: 118px;
+      }
+
+      .quick-add-dialog .preview-table {
+        overflow: auto;
+      }
+
+      .quick-add-dialog .preview-grid {
+        min-width: 640px;
+      }
+    }
   </style>
 </head>
 
@@ -372,45 +588,77 @@
           </div>
         </div>
         
-        <el-button type="primary" @click="handleAdd">新增</el-button>
-        <el-button @click="handleQuickAdd">快速新增</el-button>
-        <el-button @click="handleReset">重置</el-button>
-        <el-table height="330" :data="tableData" border style="width: 100%; margin-top: 20px"
-          :summary-method="getSummaries" show-summary>
-          <!-- 展开行 -->
-          <el-table-column type="expand" width="60">
-            <template #default="{ row }">
-              <div class="grid-container">
-                <!-- 7x7数据展示 -->
-                <div v-for="(_, rowIndex) in 7" :key="rowIndex" class="grid-row">
-                  <div v-for="(_, colIndex) in 7" :key="colIndex" class="grid-cell"
-                    :class="{zero:row.values[rowIndex * 7 + colIndex]===0}">
-                    <span class="cell-label">{{ formatLabelWithZodiac(rowIndex * 7 + colIndex + 1) }}</span>
-                    <span class="cell-value">{{ row.values[rowIndex * 7 + colIndex] }}</span>
-                  </div>
+        <panel-layout
+          :stacked="isStacked"
+          :panel-size="panelSize"
+          :panel-min="panelMin"
+          @resize-size="onPanelSize">
+          <!-- 左侧合计栏：49 个号码合计（7×7） -->
+          <template v-slot:sidebar>
+            <aside class="sidebar">
+              <div class="sidebar-title">
+                <span>列合计</span>
+                <span class="sidebar-total">总计 {{ grandTotal }}</span>
+              </div>
+              <div class="totals-grid">
+                <div v-for="(total, index) in columnTotals" :key="index" class="total-cell"
+                  :class="{ zero: total === 0 }">
+                  <span class="total-label">{{ formatLabelWithZodiac(index + 1) }}</span>
+                  <span class="total-value">{{ total }}</span>
                 </div>
               </div>
-            </template>
-          </el-table-column>
+            </aside>
+          </template>
 
-          <!-- 固定列 -->
-          <el-table-column prop="name" label="名称"></el-table-column>
-          <el-table-column prop="total" label="总数" width="200" align="center" /></el-table-column>
+          <!-- 右侧主区域：工具栏 + 表格 -->
+          <template v-slot:main>
+          <div class="main-content">
+            <div class="toolbar">
+              <el-button type="primary" @click="handleAdd">新增</el-button>
+              <el-button @click="handleQuickAdd">快速新增</el-button>
+              <el-button @click="handleReset">重置</el-button>
+            </div>
+            <div class="table-wrap">
+            <el-table :height="isStacked ? 440 : '100%'" :data="tableData" border style="width: 100%"
+              row-key="id" :summary-method="getSummaries" show-summary>
+              <!-- 展开行 -->
+              <el-table-column type="expand" width="60">
+                <template #default="{ row }">
+                  <div class="grid-container">
+                    <!-- 7x7数据展示 -->
+                    <div v-for="(_, rowIndex) in 7" :key="rowIndex" class="grid-row">
+                      <div v-for="(_, colIndex) in 7" :key="colIndex" class="grid-cell"
+                        :class="{zero:row.values[rowIndex * 7 + colIndex]===0}">
+                        <span class="cell-label">{{ formatLabelWithZodiac(rowIndex * 7 + colIndex + 1) }}</span>
+                        <span class="cell-value">{{ row.values[rowIndex * 7 + colIndex] }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
 
-          <!-- 操作列 -->
-          <el-table-column label="操作" width="200" align="center">
-            <template #default="{ row }">
-              <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+              <!-- 固定列 -->
+              <el-table-column prop="name" label="名称"></el-table-column>
+              <el-table-column prop="total" label="总数" width="200" align="center" /></el-table-column>
+
+              <!-- 操作列 -->
+              <el-table-column label="操作" width="200" align="center">
+                <template #default="{ row }">
+                  <el-button size="small" @click="handleEdit(row)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            </div>
+          </div>
+          </template>
+        </panel-layout>
 
         <!-- 编辑对话框 -->
-        <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑' : '新增'" width="80%">
-          <el-form :model="formData" ref="form">
+        <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑' : '新增'" width="min(1280px, 96vw)">
+          <el-form :model="formData" :rules="rules" ref="form">
             <el-form-item label="名称" prop="name">
-              <el-input v-model="formData.name" />
+              <el-input v-model="formData.name" placeholder="选填，可留空" />
             </el-form-item>
 
             <!-- 7x7输入网格 -->
@@ -436,10 +684,10 @@
         </el-dialog>
 
         <!-- 快速新增对话框 - 12×4+1布局 -->
-        <el-dialog v-model="quickAddDialogVisible" title="快速新增" width="1100px" class="quick-add-dialog">
+        <el-dialog v-model="quickAddDialogVisible" title="快速新增" width="min(1280px, 96vw)" class="quick-add-dialog">
           <el-form :model="quickAddForm" ref="quickAddForm">
             <el-form-item label="名称" prop="name">
-              <el-input v-model="quickAddForm.name" placeholder="请输入名称" />
+              <el-input v-model="quickAddForm.name" placeholder="选填，可留空" />
             </el-form-item>
             
             <el-form-item label="输入规则">
@@ -447,10 +695,10 @@
                 v-model="quickAddForm.text" 
                 type="textarea" 
                 :rows="4" 
-                placeholder="请输入规则，例如：1.5.6各10 或 03、24各20 或 鸡猪狗各20 或 龙鸡狗5，马3"
+                placeholder="请输入规则，例如：1.5.6各10 或 1/5/6各10 或 03、24各20 或 鸡猪狗各20 或 龙鸡狗5，马3"
                 @input="handleQuickAddInput"
               />
-              <div class="example-text">示例：1.5.6各10 或 03、24各20 或 鸡猪狗各20 或 龙鸡狗5，马3</div>
+              <div class="example-text">示例：1.5.6各10 或 1/5/6各10 或 03、24各20 或 鸡猪狗各20 或 龙鸡狗5，马3</div>
             </el-form-item>
             
             <el-form-item label="预览">
@@ -487,20 +735,37 @@
             <el-button type="primary" @click="submitQuickAdd">确认</el-button>
           </span>
         </el-dialog>
-
-        <!-- 列合计展示 -->
-        <div class="summary-row">
-          <div v-for="(total, index) in columnTotals" :key="index" class="grid-cell" :class="{zero:total===0}">
-            <span class="cell-label">{{ formatLabelWithZodiac(index + 1) }}</span>
-            <span class="cell-value">{{ total }}</span>
-          </div>
-        </div>
       </div>
     </div>
   <script>
     const { createApp } = Vue;
     const { ElButton, ElTable, ElTableColumn, ElDialog, ElForm, ElFormItem, ElInput, ElInputNumber, ElTag, ElMessageBox, ElMessage } = ElementPlus;
-    
+
+    // 两栏布局：桌面用 el-splitter 可拖动；窄屏改为上下堆叠（slot 复用同一份内容）
+    const PanelLayout = {
+      name: 'PanelLayout',
+      props: {
+        stacked: { type: Boolean, default: false },
+        panelSize: { type: [String, Number], default: '50%' },
+        panelMin: { type: [String, Number], default: 240 }
+      },
+      emits: ['resize-size'],
+      template: `
+        <el-splitter v-if="!stacked" class="app-layout" layout="horizontal">
+          <el-splitter-panel :size="panelSize" :min="panelMin" max="80%" @update:size="$emit('resize-size', $event)">
+            <slot name="sidebar"></slot>
+          </el-splitter-panel>
+          <el-splitter-panel>
+            <slot name="main"></slot>
+          </el-splitter-panel>
+        </el-splitter>
+        <div v-else class="app-layout app-layout--stacked">
+          <slot name="sidebar"></slot>
+          <slot name="main"></slot>
+        </div>
+      `
+    };
+
     const App = {
       data() {
         return {
@@ -516,29 +781,50 @@
           },
           quickAddPreviewValues: Array(49).fill(0),
           isDark: false,
-          rules: {
-            name: [{ required: true, message: '请输入名称', trigger: 'blur' }]
-          },
+          // 左侧栏宽度：跟随拖动，并记住上一次的位置（存 localStorage）
+          leftWidth: '50%',
+          panelSizeTimer: null,
+          winWidth: (typeof window !== 'undefined' ? window.innerWidth : 1280),
+          // 名称非必填；必填的是数据（49 个号码至少有一个填了值），在提交时校验
+          rules: {},
           // 生肖数组
           zodiacs: ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'],
-          // 当前年份的生肖索引（2025年是蛇年，索引为5）
-          currentYearZodiacIndex: 5
+          // 当前年份的生肖索引（2025 年是蛇年，索引 5）。
+          // 放在 data 里算（而不是 mounted），否则首帧会先渲染成"蛇"再跳到正确生肖
+          currentYearZodiacIndex: (((5 + (new Date().getFullYear() - 2025)) % 12) + 12) % 12
         }
       },
       computed: {
+        // 窄屏改为上下堆叠（不使用 splitter，避免手机上固定高度分栏）
+        isStacked() {
+          return this.winWidth <= 1024
+        },
+        // 左侧 panel 尺寸（拖动后由 onPanelSize 回写）
+        panelSize() {
+          return this.leftWidth
+        },
+        // 侧栏 panel 最小尺寸
+        panelMin() {
+          return 240
+        },
         // 计算列合计
         columnTotals() {
           const totals = Array(49).fill(0)
           this.tableData.forEach(row => {
             row.values.forEach((val, index) => {
-              totals[index] += val
+              // Number(val) || 0：清空输入框后值可能是 null/undefined，不加这层会让整列变成 NaN
+              totals[index] += Number(val) || 0
             })
           })
           return totals
         },
+        // 所有列合计的总和
+        grandTotal() {
+          return this.columnTotals.reduce((a, b) => a + b, 0)
+        },
         // 快速新增预览总计
         quickAddPreviewTotal() {
-          return this.quickAddPreviewValues.reduce((a, b) => a + b, 0)
+          return this.quickAddPreviewValues.reduce((a, b) => a + (Number(b) || 0), 0)
         },
         // 表头显示的12生肖
         zodiacsForHeader() {
@@ -551,8 +837,80 @@
         }
       },
       methods: {
+        handleResize() {
+          this.winWidth = window.innerWidth
+        },
+        onPanelSize(val) {
+          this.leftWidth = val
+          this.savePanelSize(val)
+        },
+        // 记住分栏位置：拖动过程中会高频触发，做 200ms 防抖再落盘
+        savePanelSize(val) {
+          clearTimeout(this.panelSizeTimer)
+          this.panelSizeTimer = setTimeout(() => {
+            try {
+              localStorage.setItem('panelSize', JSON.stringify(val))
+            } catch (e) {
+              // localStorage 不可用（隐私模式等）时静默忽略
+            }
+          }, 200)
+        },
+        // 读取上一次的分栏位置；px 数值超出当前窗口可用范围时退回默认 50%
+        restorePanelSize() {
+          let saved = null
+          try {
+            saved = JSON.parse(localStorage.getItem('panelSize'))
+          } catch (e) {
+            saved = null
+          }
+          if (saved === null || saved === undefined || saved === '') return
+          if (typeof saved === 'number') {
+            if (saved < 240 || saved > window.innerWidth * 0.8) return
+          }
+          this.leftWidth = saved
+        },
+        // 生成本地自增用的行 id（用于 el-table 的 row-key，保证删/插行后展开状态不错位）
+        createRowId() {
+          return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+        },
+        // 把任意历史/脏数据规整成 { id, name, values(49个数字), total }
+        normalizeRow(raw) {
+          const src = raw && typeof raw === 'object' ? raw : {}
+          const srcValues = Array.isArray(src.values) ? src.values : []
+          const values = Array.from({ length: 49 }, (_, i) => {
+            const v = Number(srcValues[i])
+            return Number.isFinite(v) ? v : 0
+          })
+          return {
+            id: typeof src.id === 'string' && src.id ? src.id : this.createRowId(),
+            name: typeof src.name === 'string' ? src.name : '',
+            values,
+            // 总数统一按 values 重算，避免历史数据里 total 与明细不一致
+            total: values.reduce((a, b) => a + b, 0)
+          }
+        },
+        // 读取本地数据：解析失败或格式不对时降级为空表，不能让它把整个页面拖崩
+        loadTableData() {
+          let parsed = []
+          try {
+            parsed = JSON.parse(localStorage.getItem('tableData') || '[]')
+          } catch (e) {
+            parsed = []
+          }
+          if (!Array.isArray(parsed)) parsed = []
+          try {
+            this.tableData = parsed.map(item => this.normalizeRow(item))
+          } catch (e) {
+            this.tableData = []
+          }
+        },
         setTableDataToLocalStorage() {
-          localStorage.setItem('tableData', JSON.stringify(this.tableData))
+          try {
+            localStorage.setItem('tableData', JSON.stringify(this.tableData))
+          } catch (e) {
+            // 常见于配额超限：不能静默失败，否则用户以为存上了
+            ElMessage.error('本地保存失败（存储空间可能已满），请勿关闭页面')
+          }
         },
         initFormData() {
           return {
@@ -571,13 +929,13 @@
           const zodiacIndex = (this.currentYearZodiacIndex - (num - 1)) % 12;
           return `${this.formatNumber(num)}${this.zodiacs[zodiacIndex < 0 ? zodiacIndex + 12 : zodiacIndex]}`;
         },
-        // 合计行计算
+        // 合计行计算（列顺序：展开 / 名称 / 总数 / 操作）
         getSummaries() {
-          const sums = ['合计', '', this.columnTotals.reduce((a, b) => a + b, 0)]
-          return sums
+          return ['', '合计', this.columnTotals.reduce((a, b) => a + b, 0), '']
         },
         calculateTotal() {
-          this.formData.total = this.formData.values.reduce((a, b) => a + b, 0)
+          // 清空数字框时值可能是 null/undefined，统一按 0 处理，避免总计变成 NaN
+          this.formData.total = this.formData.values.reduce((a, b) => a + (Number(b) || 0), 0)
         },
         // 切换暗黑/白天模式
         toggleDarkMode() {
@@ -595,6 +953,10 @@
           this.isEdit = false
           this.formData = this.initFormData()
           this.dialogVisible = true
+          // 清掉上一次校验失败留下的红字（弹窗内容不会自动销毁）
+          this.$nextTick(() => {
+            if (this.$refs.form) this.$refs.form.clearValidate()
+          })
         },
         handleQuickAdd() {
           this.quickAddForm = {
@@ -603,6 +965,9 @@
           }
           this.quickAddPreviewValues = Array(49).fill(0)
           this.quickAddDialogVisible = true
+          this.$nextTick(() => {
+            if (this.$refs.quickAddForm) this.$refs.quickAddForm.clearValidate()
+          })
         },
         handleReset() {
           this.$confirm('确认重置表格吗？', '提示', {
@@ -610,35 +975,51 @@
           }).then(() => {
             this.tableData = []
             this.setTableDataToLocalStorage()
-          })
+          }).catch(() => {}) // 点「取消」时吞掉 reject，避免控制台报 Uncaught
         },
         handleEdit(row) {
           this.isEdit = true
-          this.currentIndex = this.tableData.indexOf(row)
+          this.currentIndex = this.tableData.findIndex(item => item.id === row.id)
           this.formData = JSON.parse(JSON.stringify(row))
           this.dialogVisible = true
+          this.$nextTick(() => {
+            if (this.$refs.form) this.$refs.form.clearValidate()
+          })
         },
         handleDelete(row) {
           this.$confirm('确认删除该记录？', '提示', {
             type: 'warning'
           }).then(() => {
-            const index = this.tableData.indexOf(row)
+            const index = this.tableData.findIndex(item => item.id === row.id)
+            if (index === -1) return
             this.tableData.splice(index, 1)
             this.setTableDataToLocalStorage()
-          })
+          }).catch(() => {}) // 同上
         },
         submitForm() {
           this.$refs.form.validate(valid => {
-            if (valid) {
-              const data = { ...this.formData }
-              if (this.isEdit) {
-                this.tableData.splice(this.currentIndex, 1, data)
-              } else {
-                this.tableData.push(data)
-              }
-              this.setTableDataToLocalStorage()
-              this.dialogVisible = false
+            if (!valid) return
+            // 提交前按 values 重算，避免用户改完没失焦时 total 没跟上
+            const values = this.formData.values.map(v => Number(v) || 0)
+            const total = values.reduce((a, b) => a + b, 0)
+            // 数据必填：49 个号码至少要填一个（名称可以不填）
+            if (total <= 0) {
+              ElMessage.error('请至少为一个号码填写数据')
+              return
             }
+            const data = {
+              id: this.isEdit && this.formData.id ? this.formData.id : this.createRowId(),
+              name: (this.formData.name || '').trim(),
+              values,
+              total
+            }
+            if (this.isEdit && this.currentIndex > -1) {
+              this.tableData.splice(this.currentIndex, 1, data)
+            } else {
+              this.tableData.push(data)
+            }
+            this.setTableDataToLocalStorage()
+            this.dialogVisible = false
           })
         },
         // 处理快速新增输入
@@ -819,25 +1200,22 @@
           return char >= '0' && char <= '9';
         },
         isSeparator(char) {
-          return ['、', '，', ',', '。', '.', ';', '；', '-', ' '].includes(char);
+          return ['、', '，', ',', '。', '.', ';', '；', '-', '/', ' '].includes(char);
         },
         isKeyword(char) {
           return ['各', '个', '每', '号'].includes(char);
         },
         // 提交快速新增
         submitQuickAdd() {
-          if (!this.quickAddForm.name.trim()) {
-            ElMessage.error('请输入名称');
-            return;
-          }
-          
+          // 名称非必填，数据必填：规则至少要解析出一个号码
           if (this.quickAddPreviewTotal === 0) {
             ElMessage.error('请先输入有效的规则');
             return;
           }
           
           const data = {
-            name: this.quickAddForm.name,
+            id: this.createRowId(),
+            name: (this.quickAddForm.name || '').trim(),
             values: [...this.quickAddPreviewValues],
             total: this.quickAddPreviewTotal
           };
@@ -849,13 +1227,17 @@
         }
       },
       mounted() {
-        // 从本地存储加载表格数据
-        this.tableData = JSON.parse(localStorage.getItem('tableData')) || []
+        // 从本地存储加载表格数据（解析失败/字段缺失时自动降级，不会白屏）
+        this.loadTableData()
         
         // 从本地存储加载暗黑模式设置
-        const savedDarkMode = localStorage.getItem('darkMode');
-        if (savedDarkMode !== null) {
-          this.isDark = JSON.parse(savedDarkMode);
+        try {
+          const savedDarkMode = localStorage.getItem('darkMode');
+          if (savedDarkMode !== null) {
+            this.isDark = JSON.parse(savedDarkMode) === true;
+          }
+        } catch (e) {
+          this.isDark = false;
         }
         
         // 设置初始暗黑模式状态
@@ -865,17 +1247,28 @@
         } else {
           html.classList.remove('dark');
         }
-        
-        // 计算当前年份的生肖索引（2025年是蛇年，索引为5）
-        const currentYear = new Date().getFullYear();
-        // 计算从2025年到当前年份的偏移量
-        const yearOffset = currentYear - 2025;
-        // 更新当前年份的生肖索引（蛇年索引为5）
-        this.currentYearZodiacIndex = (5 + yearOffset) % 12;
+
+        // 初始化窗口宽度（决定 splitter 横向/纵向），并监听变化
+        this.winWidth = window.innerWidth;
+        window.addEventListener('resize', this.handleResize);
+
+        // 恢复上一次拖动的分栏位置
+        this.restorePanelSize();
+      },
+      beforeUnmount() {
+        window.removeEventListener('resize', this.handleResize);
+        clearTimeout(this.panelSizeTimer);
       }
     };
     
     const app = createApp(App);
+    app.component('panel-layout', PanelLayout);
+    // 全局注册 Element Plus 图标（Sunny / Moon ...），否则 el-button 的 icon 传字符串解析不到组件
+    if (window.ElementPlusIconsVue) {
+      for (const [name, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(name, component);
+      }
+    }
     app.use(ElementPlus);
     app.mount("#app");
 </script>
